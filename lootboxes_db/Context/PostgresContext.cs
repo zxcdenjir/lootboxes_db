@@ -72,8 +72,6 @@ public partial class PostgresContext : DbContext
         modelBuilder.Entity<LootBox>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("LootBoxes_pkey");
-
-            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
         });
 
         modelBuilder.Entity<Rarity>(entity =>
@@ -114,32 +112,31 @@ public partial class PostgresContext : DbContext
             ALTER SEQUENCE ""Categories_Id_seq"" RESTART WITH 1;
             UPDATE ""Categories"" SET ""Id"" = nextval('""Categories_Id_seq""');
         ");
+        ChangeTracker.Clear();
 
         Database.ExecuteSqlRaw(@"
             ALTER SEQUENCE ""Items_Id_seq"" RESTART WITH 1;
-            UPDATE ""Items"" SET ""Id"" = nextval('""Items_Id_seq""')
+            UPDATE ""Items"" SET ""Id"" = nextval('""Items_Id_seq""');
         ");
+        ChangeTracker.Clear();
 
         Database.ExecuteSqlRaw(@"
             ALTER SEQUENCE ""LootBoxes_Id_seq"" RESTART WITH 1;
             UPDATE ""LootBoxes"" SET ""Id"" = nextval('""LootBoxes_Id_seq""');
         ");
+        ChangeTracker.Clear();
 
         Database.ExecuteSqlRaw(@"
             ALTER SEQUENCE ""Rarities_Id_seq"" RESTART WITH 1;
             UPDATE ""Rarities"" SET ""Id"" = nextval('""Rarities_Id_seq""');
         ");
+        ChangeTracker.Clear();
 
         Database.ExecuteSqlRaw(@"
             ALTER SEQUENCE ""Users_Id_seq"" RESTART WITH 1;
             UPDATE ""Users"" SET ""Id"" = nextval('""Users_Id_seq""'); 
         ");
-
-        //Database.ExecuteSqlRaw(@"TRUNCATE TABLE ""Categories"" RESTART IDENTITY CASCADE;
-        //    TRUNCATE TABLE ""Items"" RESTART IDENTITY CASCADE;
-        //    TRUNCATE TABLE ""LootBoxes"" RESTART IDENTITY CASCADE;
-        //    TRUNCATE TABLE ""Rarities"" RESTART IDENTITY CASCADE;
-        //    TRUNCATE TABLE ""Users"" RESTART IDENTITY CASCADE;");
+        ChangeTracker.Clear();
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

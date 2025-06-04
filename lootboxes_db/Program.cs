@@ -38,7 +38,7 @@ class Program
                             Console.WriteLine("4. Работа с предметами");
                             Console.WriteLine("5. Работа с пользователями");
                             Console.WriteLine("0. Выход");
-                            switch (Input("Выберите действие: ", 0, 4))
+                            switch (Input("Выберите действие: ", 0, 5))
                             {
                                 case 1:
                                     Console.Clear();
@@ -86,23 +86,38 @@ class Program
             {
                 case 1:
                     Console.Clear();
-                    //Login();
-                    User user = context.Users.Find(Input("Введите ID пользователя: ", 1, context.Users.Count()))!; // переделать на логин и пароль
-                    UserMenu();
+                    string login = Input("Логин: ");
+                    string password = Input("Пароль: ");
+                    User? user = context.Users.FirstOrDefault(u => u.Login == login && u.Password == password);
+
+                    if (user == null)
+                    {
+                        Console.WriteLine("Неверный логин или пароль!");
+                        PressToContinue();
+                        break;
+                    }
+                    UserMenu(user);
                     break;
 
-                    void UserMenu()
+                    void UserMenu(User user)
                     {
+                        Console.Clear();
                         while (true)
                         {
+                            Console.WriteLine($"Здравствуйте, {user.FullName}");
                             Console.WriteLine("1. Открыть лутбокс");
                             Console.WriteLine("2. Посмотреть инвентарь");
                             Console.WriteLine("0. Выход");
 
                             switch (Input("Выберите действие: ", 0, 2))
                             {
+                                case 0:
+                                    Console.Clear();
+                                    return;
+
                                 case 1:
                                     Console.Clear();
+                                    PrintLootboxes();
                                     LootBox lootBoxToOpen = context.LootBoxes.Find(Input("Введите ID лутбокса, который вы хотите открыть: ", 1, context.LootBoxes.Count()))!;
 
                                     int itemDropCount = random.Next(1, context.LootBoxes.Count() + 1);
@@ -138,22 +153,23 @@ class Program
                                     break;
                                 case 2:
                                     Console.Clear();
-                                    Console.WriteLine($"Инвентарь пользователя {user.FullName} ({user.Login}):");
+                                    Console.WriteLine($"Инвентарь:");
                                     user.PrintInventory();
                                     PressToContinue();
                                     break;
-                                case 0:
-                                    Console.Clear();
-                                    return;
+
                             }
-                            break;
                         }
                     }
 
                 case 2:
                     Console.Clear();
-                    //Register();
+                    context.Users.Add(new User(Input("Введите полное имя: "), Input("Введите логин: "), Input("Введите пароль: ")));
+                    context.SaveChanges();
+                    Console.WriteLine("Успешная регистрация");
+                    PressToContinue();
                     break;
+
                 case 0:
                     Console.Clear();
                     return;
@@ -161,19 +177,20 @@ class Program
         }
     }
 
-    static void LootBoxActions()
+    static void LootBoxActions() // добавить удаление предмета из лутбокса
     {
         while (true)
         {
             PrintLootboxes();
             Console.WriteLine("1. Вывести информацию о лутбоксах");
-            Console.WriteLine("2. Добавить предмет в лутбокс");
-            Console.WriteLine("3. Создать лутбокс");
-            Console.WriteLine("4. Редактировать лутбокс");
-            Console.WriteLine("5. Удалить лутбокс");
+            Console.WriteLine("2. Создать лутбокс");
+            Console.WriteLine("3. Добавить предмет в лутбокс");
+            Console.WriteLine("4. Удалить предмет из лутбокса");
+            Console.WriteLine("5. Редактировать лутбокс");
+            Console.WriteLine("6. Удалить лутбокс");
             Console.WriteLine("0. В главное меню");
 
-            switch (Input("Выберите действие: ", 0, 5))
+            switch (Input("Выберите действие: ", 0, 6))
             {
                 case 1:
                     Console.Clear();
@@ -181,7 +198,7 @@ class Program
                     PressToContinue();
                     break;
 
-                case 2:
+                case 3:
                     Console.WriteLine();
                     PrintItems();
                     int itemId = Input("Введите ID предмета для добавления в лутбокс: ", 1, context.Items.Count());
@@ -209,7 +226,7 @@ class Program
                     PressToContinue();
                     break;
 
-                case 3:
+                case 2:
                     Console.WriteLine();
 
                     context.LootBoxes.Add(new LootBox(Input("Введите название лутбокса: "), Input("Введите описание лутбокса: ")));
@@ -219,7 +236,24 @@ class Program
                     PressToContinue();
                     break;
 
-                case 4:
+                case 4: // переделать удаление не по Count() а по Максимальному id (+ проверка) (сделать прегрузку Input без maxValue и minValue)
+                    Console.WriteLine();
+                    LootBox lootBox = context.LootBoxes.Find(Input("Введите ID лутбокса, из которого вы хотите удалить предмет: ", 1, context.LootBoxes.Count()))!;
+                    if (lootBox.Items.Count == 0)
+                    {
+                        Console.WriteLine("Лутбокс пуст!");
+                        PressToContinue();
+                        break;
+                    }
+                    Item itemToRemove = lootBox.Items.ElementAt(Input("Введите ID предмета для удаления из лутбокса: ", 1, lootBox.Items.Count) - 1);
+                    lootBox.Items.Remove(itemToRemove);
+                    lootBox.ItemCount--;
+                    context.SaveChanges();
+                    Console.WriteLine($"Предмет {itemToRemove.Name} был удалён из лутбокса {lootBox.Name}");
+                    PressToContinue();
+                    break;
+
+                case 5:
                     LootBox boxToEdit = context.LootBoxes.Find(Input("Введите ID лутбокса, в который вы хотите изменить: ", 1, context.LootBoxes.Count()))!;
                     Console.Clear();
                     EditMenu();
@@ -258,19 +292,21 @@ class Program
                     }
                     break;
 
-                case 5: // тут сделать
+                case 6:
                     Console.WriteLine();
                     int lootboxId = Input("Введите id лутбокса для удаления: ", 1, context.LootBoxes.Count());
-
+                    context.Database.ExecuteSqlRaw($"DELETE FROM \"LootBoxItems\" WHERE \"LootBoxId\" = {lootboxId};");
+                    context.ChangeTracker.Clear();
                     context.LootBoxes.Remove(context.LootBoxes.Find(lootboxId)!);
                     context.SaveChanges();
 
-                    context.Database.ExecuteSqlRaw(@"
-                        ALTER SEQUENCE ""Rarities_Id_seq"" RESTART WITH 1;
-                        UPDATE ""Rarities"" SET ""Id"" = nextval('""Rarities_Id_seq""');");
+                    context.Database.ExecuteSqlRaw(
+                        "ALTER SEQUENCE \"LootBoxes_Id_seq\" RESTART WITH 1; " +
+                        "UPDATE \"LootBoxes\" SET \"Id\" = nextval('\"LootBoxes_Id_seq\"');"
+                    );
+                    context.ChangeTracker.Clear();
 
-                    Console.WriteLine("Редкость успешно удалена");
-
+                    Console.WriteLine("Лутбокс успешно удалён");
                     PressToContinue();
                     break;
 
@@ -279,16 +315,15 @@ class Program
                     return;
             }
         }
-        static void PrintLootboxes()
+    }
+    static void PrintLootboxes()
+    {
+        foreach (LootBox lootBox in context.LootBoxes.Include(lb => lb.Items).ThenInclude(i => i.Rarity).Include(lb => lb.Items).ThenInclude(i => i.Category))
         {
-            foreach (LootBox lootBox in context.LootBoxes.Include(lb => lb.Items).ThenInclude(i => i.Rarity).Include(lb => lb.Items).ThenInclude(i => i.Category))
-            {
-                lootBox.PrintLootBox();
-                Console.WriteLine();
-            }
+            lootBox.PrintLootBox();
+            Console.WriteLine();
         }
     }
-
     static void RarityActions()
     {
         while (true)
@@ -308,7 +343,7 @@ class Program
                     PressToContinue();
                     break;
                 case 2:
-                    Console.Clear();
+                    Console.WriteLine();
 
                     if (AvaliableColors.Count == 0)
                     {
@@ -345,7 +380,7 @@ class Program
                     break;
                 case 3:
                     Console.WriteLine();
-                    Rarity r = context.Rarities.Find(Input("Введите Id редкости для редактирования: ", 2, context.Rarities.Count()))!;
+                    Rarity r = context.Rarities.Find(Input("Введите Id редкости для редактирования: ", 1, context.Rarities.Count()))!;
                     Console.Clear();
                     Menu(r);
 
@@ -365,6 +400,7 @@ class Program
                             switch (Input("Выберите действие: ", 0, 3))
                             {
                                 case 0:
+                                    Console.Clear();
                                     return;
                                 case 1:
                                     Console.WriteLine();

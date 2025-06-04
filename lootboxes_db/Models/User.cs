@@ -15,6 +15,13 @@ public partial class User
 
     public virtual ICollection<Item> Items { get; set; } = new List<Item>();
 
+    public User(string fullName, string login, string password)
+    {
+        FullName = fullName;
+        Login = login;
+        Password = password;
+    }
+
     public void PrintInventory()
     {
         Console.WriteLine("Ваш инвентарь:");
