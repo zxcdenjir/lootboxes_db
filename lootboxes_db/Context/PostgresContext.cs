@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using lootboxes_db.Models;
 using Microsoft.EntityFrameworkCore;
-using lootboxes_db.Models;
+using System;
+using System.Collections.Generic;
 
 namespace lootboxes_db.Context;
 
@@ -26,6 +26,8 @@ public partial class PostgresContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<UserInventory> UserInventories { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseNpgsql("Host=localhost; Database=postgres; Username=postgres; Password=123;");
@@ -35,11 +37,15 @@ public partial class PostgresContext : DbContext
         modelBuilder.Entity<Category>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Categories_pkey");
+
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
         });
 
         modelBuilder.Entity<Item>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Items_pkey");
+
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
 
             entity.HasOne(d => d.Category).WithMany(p => p.Items)
                 .HasForeignKey(d => d.CategoryId)
@@ -72,11 +78,15 @@ public partial class PostgresContext : DbContext
         modelBuilder.Entity<LootBox>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("LootBoxes_pkey");
+
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
         });
 
         modelBuilder.Entity<Rarity>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Rarities_pkey");
+
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -85,58 +95,29 @@ public partial class PostgresContext : DbContext
 
             entity.HasIndex(e => e.Login, "Users_Login_key").IsUnique();
 
-            entity.HasMany(d => d.Items).WithMany(p => p.Users)
-                .UsingEntity<Dictionary<string, object>>(
-                    "UserInventory",
-                    r => r.HasOne<Item>().WithMany()
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("UserInventory_ItemId_fkey"),
-                    l => l.HasOne<User>().WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("UserInventory_UserId_fkey"),
-                    j =>
-                    {
-                        j.HasKey("UserId", "ItemId").HasName("UserInventory_pkey");
-                        j.ToTable("UserInventory");
-                    });
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+        });
+
+        modelBuilder.Entity<UserInventory>(entity =>
+        {
+            entity.HasKey(e => e.UserInventoryId).HasName("UserInventory_pkey");
+
+            entity.ToTable("UserInventory");
+
+            entity.Property(e => e.UserInventoryId).UseIdentityAlwaysColumn();
+
+            entity.HasOne(d => d.Item).WithMany(p => p.UserInventories)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("UserInventory_ItemId_fkey");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserInventories)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("UserInventory_UserId_fkey");
         });
 
         OnModelCreatingPartial(modelBuilder);
-    }
-
-    public void ResetAllSequences()
-    {
-        Database.ExecuteSqlRaw(@"
-            ALTER SEQUENCE ""Categories_Id_seq"" RESTART WITH 1;
-            UPDATE ""Categories"" SET ""Id"" = nextval('""Categories_Id_seq""');
-        ");
-        ChangeTracker.Clear();
-
-        Database.ExecuteSqlRaw(@"
-            ALTER SEQUENCE ""Items_Id_seq"" RESTART WITH 1;
-            UPDATE ""Items"" SET ""Id"" = nextval('""Items_Id_seq""');
-        ");
-        ChangeTracker.Clear();
-
-        Database.ExecuteSqlRaw(@"
-            ALTER SEQUENCE ""LootBoxes_Id_seq"" RESTART WITH 1;
-            UPDATE ""LootBoxes"" SET ""Id"" = nextval('""LootBoxes_Id_seq""');
-        ");
-        ChangeTracker.Clear();
-
-        Database.ExecuteSqlRaw(@"
-            ALTER SEQUENCE ""Rarities_Id_seq"" RESTART WITH 1;
-            UPDATE ""Rarities"" SET ""Id"" = nextval('""Rarities_Id_seq""');
-        ");
-        ChangeTracker.Clear();
-
-        Database.ExecuteSqlRaw(@"
-            ALTER SEQUENCE ""Users_Id_seq"" RESTART WITH 1;
-            UPDATE ""Users"" SET ""Id"" = nextval('""Users_Id_seq""'); 
-        ");
-        ChangeTracker.Clear();
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

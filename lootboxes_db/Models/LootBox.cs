@@ -12,7 +12,14 @@ public partial class LootBox
 
     public string Description { get; set; } = null!;
 
-    public int ItemCount { get; set; }
+    public int ItemCount
+    {
+        get
+        {
+            return Items.Count;
+        }
+        set;
+    }
 
     public virtual ICollection<Item> Items { get; set; } = new List<Item>();
 

@@ -22,7 +22,7 @@ public partial class Item
 
     public virtual ICollection<LootBox> LootBoxes { get; set; } = new List<LootBox>();
 
-    public virtual ICollection<User> Users { get; set; } = new List<User>();
+    public virtual ICollection<UserInventory> UserInventories { get; set; } = new List<UserInventory>();
 
     public Item(string name, string description, int rarityId, int categoryId)
     {

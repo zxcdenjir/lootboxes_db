@@ -13,7 +13,7 @@ public partial class User
 
     public string Password { get; set; } = null!;
 
-    public virtual ICollection<Item> Items { get; set; } = new List<Item>();
+    public virtual ICollection<UserInventory> UserInventories { get; set; } = new List<UserInventory>();
 
     public User(string fullName, string login, string password)
     {
@@ -25,14 +25,15 @@ public partial class User
     public void PrintInventory()
     {
         Console.WriteLine("Ваш инвентарь:");
-        if (Items.Count == 0)
+        if (UserInventories.Count == 0)
         {
             Console.WriteLine("Инвентарь пуст");
         }
         else
         {
-            foreach (Item item in Items)
+            foreach (UserInventory userInventory in UserInventories)
             {
+                Item item = userInventory.Item;
                 Console.ForegroundColor = (ConsoleColor)Program.context.Rarities.Find(item.RarityId)!.Color;
                 Console.WriteLine(item);
                 Console.ResetColor();

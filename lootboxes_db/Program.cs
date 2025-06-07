@@ -57,15 +57,20 @@ class Program
 
                                 case 4:
                                     Console.Clear();
-
+                                    UserdbActions();
                                     break;
+                                    void UserdbActions()
+                                    {
+
+                                    }
+                                    
                                 case 0:
                                     return;
                             }
                         }
                     }
                     break;
-                case 2: // тут сделать выбор для регистрации или входа по логину и паролю (когда выбран пользователь, можно открыть лутбокс или посмотреть инвентарь)
+                case 2:
                     Console.Clear();
                     UserActions();
                     break;
@@ -88,7 +93,7 @@ class Program
                     Console.Clear();
                     string login = Input("Логин: ");
                     string password = Input("Пароль: ");
-                    User? user = context.Users.FirstOrDefault(u => u.Login == login && u.Password == password);
+                    User? user = context.Users.Include(u => u.UserInventories).ThenInclude(ui => ui.Item).ThenInclude(c => c.Category).Include(u => u.UserInventories).ThenInclude(ui => ui.Item).ThenInclude(r => r.Rarity).Where(u => u.Login == login && u.Password == password).FirstOrDefault();
 
                     if (user == null)
                     {
@@ -118,7 +123,20 @@ class Program
                                 case 1:
                                     Console.Clear();
                                     PrintLootboxes();
-                                    LootBox lootBoxToOpen = context.LootBoxes.Find(Input("Введите ID лутбокса, который вы хотите открыть: ", 1, context.LootBoxes.Count()))!;
+                                    int idLootBoxToOpen = Input<int>("Введите ID лутбокса, который вы хотите открыть: ");
+                                    LootBox lootBoxToOpen = context.LootBoxes.Find(idLootBoxToOpen);
+                                    if (lootBoxToOpen == null)
+                                    {
+                                        Console.WriteLine("Лутбокс не найден");
+                                        PressToContinue();
+                                        break;
+                                    }
+                                    if (lootBoxToOpen.ItemCount == 0)
+                                    {
+                                        Console.WriteLine("Лутбокс пуст");
+                                        PressToContinue();
+                                        break;
+                                    }
 
                                     int itemDropCount = random.Next(1, context.LootBoxes.Count() + 1);
 
@@ -131,7 +149,7 @@ class Program
                                         }
 
                                         decimal roll = (decimal)random.NextDouble() * totalChance;
-                                        Item selectedItem = lootBoxToOpen.Items.ElementAt(0);
+                                        Item selectedItem = lootBoxToOpen.Items.ElementAt(0); // исправить
 
                                         for (int j = 0; j < lootBoxToOpen.Items.Count; j++)
                                         {
@@ -146,7 +164,7 @@ class Program
                                         Console.ForegroundColor = (ConsoleColor)context.Rarities.Find(selectedItem.RarityId)!.Color;
                                         Console.WriteLine("Вы получили: " + selectedItem.Name + " - " + selectedItem.Description);
                                         Console.ResetColor();
-                                        user.Items.Add(selectedItem);
+                                        context.UserInventories.Add(new UserInventory { UserId = user.Id, ItemId = selectedItem.Id });
                                         context.SaveChanges();
                                     }
                                     PressToContinue();
@@ -164,8 +182,23 @@ class Program
 
                 case 2:
                     Console.Clear();
-                    context.Users.Add(new User(Input("Введите полное имя: "), Input("Введите логин: "), Input("Введите пароль: ")));
+                    Console.WriteLine("Регистрация нового пользователя");
+
+                    string name = Input("Введите полное имя: ", 3);
+
+                    string loginReg;
+                    do
+                    {
+                        loginReg = Input("Введите логин: ", 3);
+                        if (context.Users.Any(u => u.Login == loginReg))
+                            Console.WriteLine("Этот логин уже занят, попробуйте другой.");
+                        else
+                            break;
+                    } while (true);
+
+                    context.Users.Add(new User(name, loginReg, Input("Введите пароль: ", 8)));
                     context.SaveChanges();
+
                     Console.WriteLine("Успешная регистрация");
                     PressToContinue();
                     break;
@@ -177,7 +210,7 @@ class Program
         }
     }
 
-    static void LootBoxActions() // добавить удаление предмета из лутбокса
+    static void LootBoxActions()
     {
         while (true)
         {
@@ -236,16 +269,39 @@ class Program
                     PressToContinue();
                     break;
 
-                case 4: // переделать удаление не по Count() а по Максимальному id (+ проверка) (сделать прегрузку Input без maxValue и minValue)
+                case 4:
                     Console.WriteLine();
-                    LootBox lootBox = context.LootBoxes.Find(Input("Введите ID лутбокса, из которого вы хотите удалить предмет: ", 1, context.LootBoxes.Count()))!;
+                    lootBoxId = Input<int>("Введите ID лутбокса, из которого вы хотите удалить предмет: ");
+                    LootBox? lootBox = context.LootBoxes.Include(x=>x.Items).FirstOrDefault(x=>x.Id == lootBoxId);
+                    if (lootBox == null)
+                    {
+                        Console.WriteLine("Лутбокс с таким ID не найден!");
+                        PressToContinue();
+                        break;
+                    }
                     if (lootBox.Items.Count == 0)
                     {
                         Console.WriteLine("Лутбокс пуст!");
                         PressToContinue();
                         break;
                     }
-                    Item itemToRemove = lootBox.Items.ElementAt(Input("Введите ID предмета для удаления из лутбокса: ", 1, lootBox.Items.Count) - 1);
+                    int idItemToRemove = Input<int>("Введите ID предмета для удаления из лутбокса: ");
+                    Item? itemToRemove = null;
+                    foreach (Item item in lootBox.Items)
+                    {
+                        if (item.Id == idItemToRemove)
+                        {
+                            itemToRemove = item;
+                            break;
+                        }
+                    }
+                    if (itemToRemove == null)
+                    {
+                        Console.WriteLine("Предмет с таким ID не найден в лутбоксе!");
+                        PressToContinue();
+                        break;
+                    }
+
                     lootBox.Items.Remove(itemToRemove);
                     lootBox.ItemCount--;
                     context.SaveChanges();
@@ -294,16 +350,19 @@ class Program
 
                 case 6:
                     Console.WriteLine();
-                    int lootboxId = Input("Введите id лутбокса для удаления: ", 1, context.LootBoxes.Count());
-                    context.Database.ExecuteSqlRaw($"DELETE FROM \"LootBoxItems\" WHERE \"LootBoxId\" = {lootboxId};");
+                    int lootboxId = Input<int>("Введите id лутбокса для удаления: ");
+
+                    if (context.LootBoxes.Find(lootboxId) == null)
+                    {
+                        Console.WriteLine("Лутбокс с таким ID не найден!");
+                        PressToContinue();
+                        break;
+                    }
                     context.ChangeTracker.Clear();
+
+                    context.Database.ExecuteSqlRaw($"DELETE FROM \"LootBoxItems\" WHERE \"LootBoxId\" = {lootboxId};");
                     context.LootBoxes.Remove(context.LootBoxes.Find(lootboxId)!);
                     context.SaveChanges();
-
-                    context.Database.ExecuteSqlRaw(
-                        "ALTER SEQUENCE \"LootBoxes_Id_seq\" RESTART WITH 1; " +
-                        "UPDATE \"LootBoxes\" SET \"Id\" = nextval('\"LootBoxes_Id_seq\"');"
-                    );
                     context.ChangeTracker.Clear();
 
                     Console.WriteLine("Лутбокс успешно удалён");
@@ -380,7 +439,14 @@ class Program
                     break;
                 case 3:
                     Console.WriteLine();
-                    Rarity r = context.Rarities.Find(Input("Введите Id редкости для редактирования: ", 1, context.Rarities.Count()))!;
+                    int rId = Input<int>("Введите ID редкости для редактирования: ");
+                    Rarity? r = context.Rarities.Find(rId);
+                    if (r == null)
+                    {
+                        Console.WriteLine("Редкость с таким ID не найдена!");
+                        PressToContinue();
+                        break;
+                    }
                     Console.Clear();
                     Menu(r);
 
@@ -446,7 +512,13 @@ class Program
                     break;
                 case 4:
                     Console.WriteLine();
-                    int rarityId = Input("Введите id редкости для удаления: ", 2, context.Rarities.Count());
+                    int rarityId = Input<int>("Введите id редкости для удаления: ");
+                    if (context.Rarities.Find(rarityId) == null)
+                    {
+                        Console.WriteLine("Редкость с таким ID не найдена!");
+                        PressToContinue();
+                        break;
+                    }
                     bool isRemovable = true;
                     foreach (Item item in context.Items.Include(r => r.Rarity))
                     {
@@ -458,10 +530,6 @@ class Program
                         AvaliableColors.Add(context.Rarities.Find(rarityId)!.Color);
                         context.Rarities.Remove(context.Rarities.Find(rarityId)!);
                         context.SaveChanges();
-
-                        context.Database.ExecuteSqlRaw(@"
-                            ALTER SEQUENCE ""Rarities_Id_seq"" RESTART WITH 1;
-                            UPDATE ""Rarities"" SET ""Id"" = nextval('""Rarities_Id_seq""');");
 
                         Console.WriteLine("Редкость успешно удалена");
                     }
@@ -526,10 +594,45 @@ class Program
             return value;
         }
     }
+    static T Input<T>(string text) where T : struct, IComparable<T>
+    {
+        while (true)
+        {
+            Console.Write(text);
+            string input = Console.ReadLine()!;
+
+            T value;
+            try
+            {
+                value = (T)Convert.ChangeType(input, typeof(T));
+            }
+            catch
+            {
+                Console.WriteLine("Неверный ввод данных!");
+                continue;
+            }
+
+            return value;
+        }
+    }
     static string Input(string text)
     {
         Console.Write(text);
         return Console.ReadLine()!;
+    }
+    static string Input(string text, int minLength)
+    {
+        while (true)
+        {
+            Console.Write(text);
+            string input = Console.ReadLine()!;
+            if (input.Length < minLength)
+            {
+                Console.WriteLine($"Минимальная длина ввода: {minLength} символов!");
+                continue;
+            }
+            return input;
+        }
     }
 
     static void PressToContinue()
@@ -537,22 +640,5 @@ class Program
         Console.WriteLine("\nДля продолжения нажмите любую клавишу...");
         Console.ReadKey();
         Console.Clear();
-    }
-
-    static void ReCalculateItemsId()
-    {
-        int index = 1;
-        foreach (Item item in context.Items)
-        {
-            item.Id = index;
-        }
-    }
-    static void ReCalculateRaritiesId()
-    {
-        int index = 1;
-        foreach (Rarity rarity in context.Rarities)
-        {
-            rarity.Id = index;
-        }
     }
 }
