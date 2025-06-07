@@ -42,6 +42,7 @@ public partial class User
                 Console.WriteLine(item);
                 Console.ResetColor();
             }
+            Console.WriteLine($"\nВсего предметов: {UserInventories.Count}");
         }
     }
 }
