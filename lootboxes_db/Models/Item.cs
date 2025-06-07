@@ -33,6 +33,6 @@ public partial class Item
     }
     public override string ToString()
     {
-        return $"ID: {Id}, Название: {Name}, Редкость: {Rarity.Name}, Категория: {Category.Name}";
+        return $"ID: {Id}, Название: {Name}, Редкость: {Rarity.Name}, Категория: {Category.Name}, Описание: {Description}";
     }
 }

@@ -22,9 +22,13 @@ public partial class User
         Password = password;
     }
 
+    public override string ToString()
+    {
+        return $"ID: {Id}, ФИО: {FullName}, Логин: {Login}";
+    }
+
     public void PrintInventory()
     {
-        Console.WriteLine("Ваш инвентарь:");
         if (UserInventories.Count == 0)
         {
             Console.WriteLine("Инвентарь пуст");

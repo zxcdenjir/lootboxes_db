@@ -12,14 +12,7 @@ public partial class LootBox
 
     public string Description { get; set; } = null!;
 
-    public int ItemCount
-    {
-        get
-        {
-            return Items.Count;
-        }
-        set;
-    }
+    public int ItemCount { get; set; }
 
     public virtual ICollection<Item> Items { get; set; } = new List<Item>();
 
@@ -34,7 +27,7 @@ public partial class LootBox
     {
         Console.Write($"Лутбокс: ");
         Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.Write($"{Id}");
+        Console.Write(Id);
         Console.ResetColor();
         Console.WriteLine($", Название: {Name}, Колличество предметов: {ItemCount}");
         Console.WriteLine($"Описание: {Description}");
